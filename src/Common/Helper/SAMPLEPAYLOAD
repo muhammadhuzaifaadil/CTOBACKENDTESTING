@@ -1,0 +1,21 @@
+{
+  "role": "buyer",
+  "user": {
+    "username": "John Doe",
+    "email": "john@example.com",
+    "password": "secret123"
+  },
+  "contact": {
+    "phoneCode": "+92",
+    "phoneNumber": "3123456789",
+    "address": "Street 12, Islamabad",
+    "city": "Islamabad",
+    "country": "Pakistan"
+  },
+  "company": {
+    "name": "ABC Traders",
+    "websiteUrl": "https://abctraders.com",
+    "businessCategory": "Electronics"
+  },
+  "acceptedTerms": true
+}
