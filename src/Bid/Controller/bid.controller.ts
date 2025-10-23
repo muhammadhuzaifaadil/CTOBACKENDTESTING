@@ -1,4 +1,4 @@
-import { UseGuards, Controller, Post, Body, Get, Param, ParseIntPipe, Put, Query } from "@nestjs/common";
+import { UseGuards, Controller, Post, Body, Get, Param, ParseIntPipe, Put, Query, Patch } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiTags, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { BidService } from "../Services/Bid.service";
@@ -21,7 +21,12 @@ export class BidController {
         getAll(@CurrentUser('userId') userId: number,@CurrentUser('role') userRole: any) {
             return this.bidService.getAllBids(userId,userRole);
         }
-     
+     @Get('project/:projectId')
+async getBidsForProject(
+  @Param('projectId', ParseIntPipe) projectId: number,@CurrentUser('role') userRole: any,@CurrentUser('userId') userId: any) {
+  
+  return this.bidService.getBidsForProject(projectId, userId, userRole);
+}
     @Get(':id')
         getById(@Param('id', ParseIntPipe) id: number,@CurrentUser('userId') userId: number,@CurrentUser('role') userRole: any) {
             return this.bidService.getBidById(id,userId,userRole);
@@ -32,6 +37,20 @@ export class BidController {
         {
             return this.bidService.withdrawBid(id,userId,userRole);
         }
+
+@Patch(':id/accept')
+async acceptBid(@Param('id', ParseIntPipe) id: number,@CurrentUser('userId') userId:number,@CurrentUser('role') userRole:any) {
+  return this.bidService.acceptBid(id, userId, userRole);
+}
+
+@Patch(':id/reject')
+async rejectBid(@Param('id', ParseIntPipe) id: number, @CurrentUser('userId') userId:number,@CurrentUser('role') userRole:any) {
+
+  return this.bidService.rejectBid(id, userId, userRole);
+}
+
+
+
 
        @Get('paginated/all')
        @ApiQuery({ name: 'filterKey', required: false, type: String, description: 'Field name to filter by (e.g. firstName, email)' })
