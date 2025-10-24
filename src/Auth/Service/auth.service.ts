@@ -168,6 +168,7 @@ export class AuthService {
 
 //     return `Password reset link has been sent to your email=${token} remove after testing`;
 //   }
+
 async register(dto: RegisterDto, files?: Record<string, Express.Multer.File[]>): Promise<User> {
   // ✅ 1. Check for existing user
   const existingUser = await this.userRepo.findOne({
@@ -254,7 +255,6 @@ async register(dto: RegisterDto, files?: Record<string, Express.Multer.File[]>):
 
   return savedUser;
 }
-
 
   async resetPassword(dto: ResetPasswordDto): Promise<string> {
     const user = await this.userRepo.findOne({ where: { resetPasswordToken: dto.token } });

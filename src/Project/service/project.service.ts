@@ -25,21 +25,7 @@ export class ProjectService {
     private readonly mapper:mapperService,
   ) {}
 
-  // 🟢 Create Project
-  // async createProject(userid:number,dto: CreateProjectDto): Promise<ResultDto<Project>> {
-  //   try {
-  //     const project = this.projectRepo.create({
-  //     ...dto,
-  //     userId: userid, 
-  //   });
-  //     const saved = await this.projectRepo.save(project);
-  //     return new ResultDto(saved, 'Project created successfully', true);
-  //   } catch (error) {
-  //     throw new InternalServerErrorException(error.message);
-  //   }
-  // }
-
-
+  // 🟢 Create Project save local attachements
   async createProject(
   userId: number,
   dto: any,
@@ -101,6 +87,62 @@ export class ProjectService {
     throw new InternalServerErrorException(error.message);
   }
 }
+// async createProject(
+//   userId: number,
+//   dto: any,
+//   files?: Record<string, Express.Multer.File[]>,
+// ): Promise<ResultDto<any>> {
+//   try {
+//     // ✅ 1. Handle file upload (if provided)
+//     let attachmentUrl: string | null = null;
+
+//     if (files?.attachment?.[0]) {
+//       // upload to UploadThing or S3 instead of local disk
+//       const uploadedFile = await this.uploadService.uploadToUploadThing(files.attachment[0]);
+//       attachmentUrl = uploadedFile.url; // Cloud-hosted file URL
+//     }
+
+//     // ✅ 2. Handle skills array
+//     const skills = Array.isArray(dto.skillsRequired)
+//       ? dto.skillsRequired.join(', ')
+//       : dto.skillsRequired;
+
+//     // ✅ 3. Handle project status color
+//     let color = '';
+//     switch (dto.status) {
+//       case ProjectStatus.DRAFT:
+//         color = StatusColor.DRAFTCOLOR.toString();
+//         break;
+//       case ProjectStatus.COMPLETED:
+//         color = StatusColor.COMPLETEDCOLOR.toString();
+//         break;
+//       case ProjectStatus.IN_PROGRESS:
+//         color = StatusColor.IN_PROGRESSCOLOR.toString();
+//         break;
+//       case ProjectStatus.PUBLISHED:
+//         color = StatusColor.PUBLISHEDCOLOR.toString();
+//         break;
+//       default:
+//         color = StatusColor.DRAFTCOLOR.toString();
+//     }
+
+//     // ✅ 4. Create project entity
+//     const project = this.projectRepo.create({
+//       ...dto,
+//       skillsRequired: skills,
+//       userId,
+//       attachment: attachmentUrl,
+//       status: dto.status || ProjectStatus.DRAFT,
+//       statusColor: color,
+//     });
+
+//     const saved = await this.projectRepo.save(project);
+//     return new ResultDto(saved, 'Project created successfully', true);
+//   } catch (error) {
+//     throw new InternalServerErrorException(error.message);
+//   }
+// }
+
 
 // Get projects for the seller
 //  async getAllProjects(userId:number,userRole:string): Promise<ResultDto<ProjectResponseDTO[]>> {
