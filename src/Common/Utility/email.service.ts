@@ -5,13 +5,20 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class EmailService {
   private transporter = nodemailer.createTransport({
-    host: 'smtp.hostinger.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: 'muhammad.huzaifa@iplexsoft.com',
-      pass: 'M@h#123123', // Use app password if 2FA enabled
-    },
+    // host: 'smtp.hostinger.com',
+    // port: 465,
+    // secure: true,
+    // auth: {
+    //   user: 'muhammad.huzaifa@iplexsoft.com',
+    //   pass: 'M@h#123123', // Use app password if 2FA enabled
+    // },
+     host: 'smtp.hostinger.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS1+'#'+process.env.MAIL_PASS2,
+  },
   });
 
   async sendMail(to: string, subject: string, html: string) {

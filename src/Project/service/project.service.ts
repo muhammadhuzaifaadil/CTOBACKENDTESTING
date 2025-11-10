@@ -4,9 +4,10 @@ import {
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Not, Repository, SelectQueryBuilder } from 'typeorm';
 import { Project, ProjectStatus, StatusColor } from '../entity/project.entity';
 import { CreateProjectDto } from '../DTOs/project.dto';
 import { UpdateProjectDto } from '../DTOs/project.dto';
@@ -15,14 +16,21 @@ import { UploadService } from 'src/Uploads/services/uploads.services';
 import { ProjectResponseDTO } from '../DTOs/projectResponse.dto';
 import { mapperService } from 'src/Common/Utility/mapper.dto';
 import { RoleType } from 'src/Roles/Entities/Role.entity';
+import { Bid, BidStatus } from 'src/Bid/Entity/Bid.entity';
+// import { CACHE_MANAGER } from '@nestjs/cache-manager';
+// import * as cacheManager_1 from 'cache-manager'; // ✅ correct Cache type
 
 @Injectable()
 export class ProjectService {
   constructor(
     @InjectRepository(Project)
     private readonly projectRepo: Repository<Project>,
+    @InjectRepository(Bid)
+    private readonly bidRepo:Repository<Bid>,
     private readonly uploadService:UploadService,
     private readonly mapper:mapperService,
+  //    @Inject(CACHE_MANAGER)
+  // private readonly cacheManager: cacheManager_1.Cache, // ✅ now has get/set/del
   ) {}
 
   // 🟢 Create Project save local attachements
@@ -504,7 +512,7 @@ async getProjectsPaginated(
     const totalCount = await qb.getCount();
 
     // 📄 Pagination & sorting
-    qb.orderBy('project.id', 'ASC').skip(skip).take(limit);
+    qb.orderBy('project.id', 'DESC').skip(skip).take(limit);
 
     const projects = await qb.getMany();
     const totalPages = Math.ceil(totalCount / limit);
@@ -588,4 +596,356 @@ if (![ProjectStatus.DRAFT, ProjectStatus.PUBLISHED].includes(project.status)) {
     await this.projectRepo.remove(project);
     return new ResultDto(null, 'Project deleted successfully', true);
   }
+
+
+  // Get Buyer Dashboard summary
+
+//   async getDetails(id:number):Promise<ResultDto<any>|any>
+//   {
+//     try {
+// const [projects, count] = await this.projectRepo.findAndCount({
+//   where: {
+//     userId: id,
+//     status: Not(ProjectStatus.COMPLETED),
+//   },
+// });
+
+// const [pendingBids,pcount] = await this.projectRepo.findAndCount({where:
+//   {userId:id, bids:{status:BidStatus.PENDING}},
+//    relations: ["bids"],
+// },
+// )
+// const [completedProjects,cCount] = await this.projectRepo.findAndCount({where:{userId:id,status:ProjectStatus.COMPLETED}})
+// const projectSpent = await this.projectRepo.find({
+//   where: {
+//     userId: id,
+//     bids: {
+//       status: BidStatus.ACCEPTED,
+//     },
+//   },
+//   relations: ["bids"], // Include bids relation
+//   select: {
+//     id: true,
+//     bids: {
+//       bidAmount: true,
+//     },
+//   },
+// });
+
+// const totalSpent = Math.round(
+//       projectSpent.reduce((sum, project) => {
+//         const projectTotal = project.bids?.reduce((bSum, bid) => {
+//           const bidAmount = parseFloat(bid.bidAmount as any) || 0;
+//           return bSum + bidAmount;
+//         }, 0);
+//         return sum + projectTotal;
+//       }, 0)
+//     );
+
+// return new ResultDto(
+//   {
+//     "activeProjects":count,
+//     "pendingBids":pcount,
+//     "completed":cCount,
+//     "totalSpent":totalSpent
+//   },
+//   "Data Successfully fetched",
+//   true
+// )
+
+// } catch (error) {
+//       return new InternalServerErrorException(error)
+//     }
+//   }
+//   // runs in parrallel faster than before still making 4 db calls
+//   async getDetails(id: number): Promise<ResultDto<any> | any> {
+//   try {
+//     const [
+//       activeProjects,
+//       completedProjects,
+//       pendingBids,
+//       acceptedProjects
+//     ] = await Promise.all([
+//       // Count active projects
+//       this.projectRepo.count({
+//         where: {
+//           userId: id,
+//           status: Not(ProjectStatus.COMPLETED),
+//         },
+//       }),
+
+//       // Count completed projects
+//       this.projectRepo.count({
+//         where: {
+//           userId: id,
+//           status: ProjectStatus.COMPLETED,
+//         },
+//       }),
+
+//       // Count pending bids
+//       this.bidRepo.count({
+//         where: {
+//           project: { userId: id },
+//           status: BidStatus.PENDING,
+//         },
+//         relations: ["project"],
+//       }),
+
+//       // Find accepted bids (to calculate total spent)
+//       this.bidRepo.find({
+//         where: {
+//           project: { userId: id },
+//           status: BidStatus.ACCEPTED,
+//         },
+//         select: ["bidAmount"],
+//         relations: ["project"],
+//       }),
+//     ]);
+
+//     const totalSpent = Math.round(
+//       acceptedProjects.reduce((sum, bid) => {
+//         const bidAmount = parseFloat(bid.bidAmount as any) || 0;
+//         return sum + bidAmount;
+//       }, 0)
+//     );
+
+//     return new ResultDto(
+//       {
+//         activeProjects,
+//         pendingBids,
+//         completed: completedProjects,
+//         totalSpent,
+//       },
+//       "Data successfully fetched",
+//       true
+//     );
+//   } catch (error) {
+//     return new InternalServerErrorException(error);
+//   }
+// }
+
+// buyer summary querybuilder reduces 4 db calls to one
+async getBuyerDetails(id: number): Promise<ResultDto<any> | any> {
+  const queryRunner = this.projectRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+  try {
+    
+
+    // Aggregate everything in a single set of queries
+    const result = await queryRunner.manager.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status != '${ProjectStatus.COMPLETED}') AS "activeProjects",
+        COUNT(*) FILTER (WHERE status = '${ProjectStatus.COMPLETED}') AS "completedProjects",
+        (
+          SELECT COUNT(*)
+          FROM "bids" b
+          INNER JOIN "projects" p ON p.id = b."projectId"
+          WHERE p."userId" = $1 AND b.status = '${BidStatus.PENDING}'
+        ) AS "pendingBids",
+        COALESCE((
+          SELECT SUM(CAST(b."bidAmount" AS FLOAT))
+          FROM "bids" b
+          INNER JOIN "projects" p ON p.id = b."projectId"
+          WHERE p."userId" = $1 AND b.status = '${BidStatus.ACCEPTED}'
+        ), 0) AS "totalSpent"
+      FROM "projects"
+      WHERE "userId" = $1
+    `, [id]);
+
+    const data = result[0];
+
+    return new ResultDto(
+      {
+        activeProjects: data.activeProjects,
+        pendingBids: data.pendingBids,
+        completed: data.completedProjects,
+        totalSpent: String(data.totalSpent),
+      },
+      "Data Successfully fetched",
+      true
+    );
+  } catch (error) {
+    return new InternalServerErrorException(error);
+  }finally {
+    await queryRunner.release();  // ✅ IMPORTANT
+  }
+}
+
+// async getBuyerDetailswithCache(id: number): Promise<ResultDto<any>> {
+//  const cacheKey = `buyer:details:${id}`;
+
+//     // ✅ Get cached data
+//     const cached: any = await this.cacheManager.get(cacheKey);
+//     if (cached) {
+//       return new ResultDto(cached, "Data fetched from cache", true);
+//     }
+
+//   const queryRunner = this.projectRepo.manager.connection.createQueryRunner();
+//   await queryRunner.connect();
+//   try {
+//     const result = await queryRunner.manager.query(`
+//       SELECT
+//         COUNT(*) FILTER (WHERE status != '${ProjectStatus.COMPLETED}') AS "activeProjects",
+//         COUNT(*) FILTER (WHERE status = '${ProjectStatus.COMPLETED}') AS "completedProjects",
+//         (
+//           SELECT COUNT(*) FROM "bids" b
+//           INNER JOIN "projects" p ON p.id = b."projectId"
+//           WHERE p."userId" = $1 AND b.status = '${BidStatus.PENDING}'
+//         ) AS "pendingBids",
+//         COALESCE((
+//           SELECT SUM(CAST(b."bidAmount" AS FLOAT))
+//           FROM "bids" b
+//           INNER JOIN "projects" p ON p.id = b."projectId"
+//           WHERE p."userId" = $1 AND b.status = '${BidStatus.ACCEPTED}'
+//         ), 0) AS "totalSpent"
+//       FROM "projects"
+//       WHERE "userId" = $1
+//     `, [id]);
+
+//     const data = {
+//       activeProjects: result[0].activeProjects,
+//       pendingBids: result[0].pendingBids,
+//       completed: result[0].completedProjects,
+//       totalSpent: String(result[0].totalSpent),
+//     };
+
+//     await this.cacheManager.set(cacheKey, data, 300); // Cache for 5 min
+//     return new ResultDto(data, "Data successfully fetched", true);
+//   } finally {
+//     await queryRunner.release();
+//   }
+// }
+
+
+// async getSellerDetailswithCache(id: number): Promise<ResultDto<any>> {
+//   const cacheKey = `seller:details:${id}`;
+//   const cached = await this.cacheManager.get(cacheKey);
+
+//   if (cached) {
+//     return new ResultDto(cached, "Data fetched from cache", true);
+//   }
+
+//   const queryRunner = this.bidRepo.manager.connection.createQueryRunner();
+//   await queryRunner.connect();
+//   try {
+//     const result = await queryRunner.manager.query(`
+//       SELECT
+//         COUNT(*) AS "activeBids",
+//         COUNT(*) FILTER (WHERE b.status = '${BidStatus.ACCEPTED}') AS "projectsWon",
+//         COUNT(*) FILTER (WHERE p.status = '${ProjectStatus.COMPLETED}') AS "projectsCompleted",
+//         COALESCE(
+//           SUM(
+//             CASE WHEN b.status = '${BidStatus.ACCEPTED}' 
+//             THEN CAST(b."bidAmount" AS FLOAT) 
+//             ELSE 0 END
+//           ), 0) AS "totalEarnings"
+//       FROM "bids" b
+//       LEFT JOIN "projects" p ON p.id = b."projectId"
+//       WHERE b."sellerId" = $1
+//     `, [id]);
+
+//     const data = {
+//       ActiveBids: Number(result[0].activeBids) || 0,
+//       ProjectsWon: Number(result[0].projectsWon) || 0,
+//       Completed: Number(result[0].projectsCompleted) || 0,
+//       TotalEarnings: Math.round(Number(result[0].totalEarnings) || 0),
+//     };
+
+//     await this.cacheManager.set(cacheKey, data, 300); // Cache 5 min
+//     return new ResultDto(data, "Data fetched successfully", true);
+//   } finally {
+//     await queryRunner.release();
+//   }
+// }
+
+
+
+// seller summary
+
+// async getSellerDetails(id:number):Promise<ResultDto<any> | any>
+// {
+//   try {
+//     // const id = Number(userId);
+//     const [activeBid,count] = await this.bidRepo.findAndCount({where:{seller:{id}}})
+//     const [projectsWon,pcount] = await this.bidRepo.findAndCount({where:{seller:{id},status:BidStatus.ACCEPTED}})
+//     const [projectsCompleted,cCount] = await this.bidRepo.findAndCount(
+//       {
+//         where:{seller:{id},project:{status:ProjectStatus.COMPLETED}},
+//         relations:["project"]
+//       }
+//     )
+//     const [acceptedBids, totalCount] = await this.bidRepo.findAndCount({
+//   where: {
+//     seller: { id },
+//     status: BidStatus.ACCEPTED,
+//   },
+//   select: ['bidAmount'],
+// });
+
+// const totalEarnings = Math.round(
+//   acceptedBids.reduce((sum, bid) => sum + Number(bid.bidAmount || 0), 0)
+// );
+
+// return new ResultDto({
+//   ActiveBids:count,
+//   ProjectsWon:pcount,
+//   Completed:cCount,
+//   TotalEarnings:totalEarnings
+// },"Data Fetched Successfully",true)
+    
+//   } catch (error) {
+//     return new InternalServerErrorException(error)
+//   }
+// }
+// 1 round trip
+async getSellerDetails(id: number): Promise<ResultDto<any> | any> {
+  const queryRunner = this.bidRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+  try {
+    
+
+    const result = await queryRunner.manager.query(
+      `
+      SELECT
+        COUNT(*) AS "activeBids",
+        COUNT(*) FILTER (WHERE b.status = '${BidStatus.ACCEPTED}') AS "projectsWon",
+        COUNT(*) FILTER (
+          WHERE p.status = '${ProjectStatus.COMPLETED}'
+        ) AS "projectsCompleted",
+        COALESCE(
+          SUM(
+            CASE WHEN b.status = '${BidStatus.ACCEPTED}' 
+            THEN CAST(b."bidAmount" AS FLOAT) 
+            ELSE 0 END
+          ), 
+        0) AS "totalEarnings"
+      FROM "bids" b
+      LEFT JOIN "projects" p ON p.id = b."projectId"
+      WHERE b."sellerId" = $1
+      `,
+      [id]
+    );
+
+    const data = result[0];
+
+    return new ResultDto(
+      {
+        ActiveBids: Number(data.activeBids) || 0,
+        ProjectsWon: Number(data.projectsWon) || 0,
+        Completed: Number(data.projectsCompleted) || 0,
+        TotalEarnings: Math.round(Number(data.totalEarnings) || 0),
+      },
+      "Data Fetched Successfully",
+      true
+    );
+
+  } catch (error) {
+    return new InternalServerErrorException(error);
+  }
+  finally {
+    await queryRunner.release();  // ✅ IMPORTANT
+  }
+}
+
+
 }

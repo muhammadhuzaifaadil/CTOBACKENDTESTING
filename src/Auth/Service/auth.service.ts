@@ -329,6 +329,11 @@ async updatePassword(dto: UpdatePasswordDto,userId:number): Promise<string> {
       relations: ['role'],
     });
 
+    if(user?.isDeleted ===true)
+    {
+      throw new BadRequestException("Account is invalid");
+    }
+    
     let sellerCompanyName: string | undefined = undefined;
     if (user?.role?.name === RoleType.SELLER) {
       const seller = await this.sellerRepo.findOne({
@@ -345,7 +350,7 @@ async updatePassword(dto: UpdatePasswordDto,userId:number): Promise<string> {
     const payload = { sub: user.id, email: user.email, role: user.role.name };
 
     // short-lived access token (15 min)
-    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
 
     // long-lived refresh token (7 days)
     const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '7d' });

@@ -29,6 +29,9 @@ export class BidResponseDTO {
   @ApiProperty({ enum: BidStatus })
   status: BidStatus;
 
+  @ApiProperty()
+  createdAt:any;
+
   constructor(partial: Partial<BidResponseDTO>) {
     Object.assign(this, partial);
   }

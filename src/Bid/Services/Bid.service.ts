@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   ForbiddenException,
+  HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository, SelectQueryBuilder } from 'typeorm';
@@ -89,7 +90,7 @@ export class BidService {
 
 //   return new ResultDto(bid, 'Bid placed successfully', true);
 // }
-async createBid(sellerId: number, dto: postBidDTO): Promise<ResultDto<Bid|any>> {
+async createBid(sellerId: number, dto: postBidDTO): Promise<ResultDto<Bid|any>|any> {
   try {
      const seller = await this.userRepo.findOne({ where: { id: sellerId } });
   if (!seller) throw new BadRequestException('Seller not found.');
@@ -107,7 +108,6 @@ async createBid(sellerId: number, dto: postBidDTO): Promise<ResultDto<Bid|any>> 
     .getExists();
 
   if (alreadyBid) {
-    // return new ResultDto([], 'You have already placed a bid on this project.', true);
     throw new BadRequestException('You have already placed a bid on this project.');
   }
 
@@ -160,9 +160,12 @@ if(dto.bidAmount<=0)
     : 'Bid placed successfully.';
 
   return new ResultDto(bid, message, true);
-  } catch (error) {
-    return error;
-  }
+  } 
+  catch (error) {
+  if (error instanceof HttpException) throw error;
+  throw new InternalServerErrorException(error.message);
+}
+
  
 }
 
@@ -246,10 +249,15 @@ async getBidsPaginated(
 
     // 🔍 Apply dynamic filters
     if (filterBy && filterKey) {
-      qb.andWhere(`bid.${filterKey} ILIKE :filterBy`, {
-        filterBy: `%${filterBy}%`,
-      });
-    }
+  if (filterKey === 'status') {
+    qb.andWhere(`bid.${filterKey} = :filterBy`, { filterBy });
+  } else {
+    qb.andWhere(`bid.${filterKey} ILIKE :filterBy`, {
+      filterBy: `%${filterBy}%`,
+    });
+  }
+}
+
    
 
 
@@ -272,7 +280,7 @@ async getBidsPaginated(
           timeline: b.timeline,
           status: b.status,
           attachment: b.attachment,
-          // createdAt: b.createdAt,
+          createdAt: b.createdAt,
           ...(userRole === RoleType.BUYER && b.seller
             ? {
                 sellerInfo: {
@@ -312,6 +320,7 @@ async getBidsPaginated(
     throw new InternalServerErrorException(error.message);
   }
 }
+
 
 
 

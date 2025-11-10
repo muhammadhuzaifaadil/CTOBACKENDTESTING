@@ -13,7 +13,7 @@ export class BidController {
   constructor(private readonly bidService: BidService) {}
 
    @Post()
-     create(@CurrentUser('userId') userId: number,@Body() dto: postBidDTO) {
+     async create(@CurrentUser('userId') userId: number,@Body() dto: postBidDTO) {
        return this.bidService.createBid(userId,dto);
      }
 

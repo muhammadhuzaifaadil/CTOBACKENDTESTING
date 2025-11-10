@@ -15,20 +15,20 @@ import { RoleType } from 'src/Roles/Entities/Role.entity';
 
 // ✅ USER INFO DTO
 export class UserInfoDto {
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  firstName: string;
+  firstName?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   middleName?: string;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsString()
-  lastName: string;
+  lastName?: string;
 
   @ApiProperty()
   @IsEmail()
@@ -54,6 +54,11 @@ export class ContactInfoDto {
   @IsNotEmpty()
   @IsString()
   phoneNumber: string;
+
+   @ApiProperty()
+  @IsOptional()
+  @IsString()
+  address: string;
 
   @ApiProperty()
   @IsNotEmpty()

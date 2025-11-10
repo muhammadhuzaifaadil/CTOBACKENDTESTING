@@ -88,4 +88,10 @@ async getUserById(@Param('id', ParseIntPipe) id: number) {
   return this.userService.getUserById(id);
 }
 
+@Delete(":id")
+@ApiOperation({summary:"delete user manually"})
+async deleteUserById(@Param('id', ParseIntPipe) id: number)
+{
+  return this.userService.deleteUser(id);
+}
 }

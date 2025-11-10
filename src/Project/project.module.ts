@@ -7,10 +7,15 @@ import { ProjectService } from './service/project.service';
 import { UploadService } from 'src/Uploads/services/uploads.services';
 import { UploadModule } from 'src/Uploads/upload.module';
 import { mapperService } from 'src/Common/Utility/mapper.dto';
+import { Bid } from 'src/Bid/Entity/Bid.entity';
+// import { CacheModule } from '@nestjs/cache-manager';
 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Project]),UploadModule],
+  imports: [TypeOrmModule.forFeature([Project,Bid]),UploadModule
+  ,
+  // CacheModule.register()
+],
   controllers: [ProjectController],
   providers: [ProjectService,mapperService],
   exports: [ProjectService],

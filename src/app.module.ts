@@ -16,6 +16,8 @@ import { OTPModule } from './OTP/OTP.module';
 import { UploadModule } from './Uploads/upload.module';
 import { ProjectModule } from './Project/project.module';
 import { BidModule } from './Bid/Bid.module';
+// import { CacheModule } from '@nestjs/cache-manager';
+// import { redisStore } from 'cache-manager-ioredis-yet';
 
 @Module({
   imports: [OTPModule,
@@ -27,6 +29,20 @@ import { BidModule } from './Bid/Bid.module';
       serveRoot: '/uploads',
     }),
     AuthModule,
+
+    // // ✅ Redis Cache (Global)
+    // CacheModule.registerAsync({
+    //   isGlobal: true,
+    //   useFactory: async () => ({
+    //     store: await redisStore({
+    //       socket: {
+    //         host: process.env.REDIS_HOST || 'localhost',
+    //         port: Number(process.env.REDIS_PORT) || 6379,
+    //       },
+    //       ttl: 300, // 5 minutes default TTL
+    //     }),
+    //   }),
+    // }),
 
     TypeOrmModule.forRoot({
        type: 'postgres',

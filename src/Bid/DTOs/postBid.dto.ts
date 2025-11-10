@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
 import { BidStatus } from "../Entity/Bid.entity";
 
 export class postBidDTO{
@@ -10,12 +10,15 @@ export class postBidDTO{
     // SellerId:number;
 
     @ApiProperty()
+    @IsNumber()
     ProjectId:number;
 
     @ApiProperty()
+    @IsString()
     proposalText:string;
 
     @ApiProperty()
+    @IsString()
     timeline:string;
 
     // @ApiProperty()
@@ -30,6 +33,7 @@ export class postBidDTO{
 
 
     @ApiProperty()
+    @IsNumber()
     bidAmount:number;
 
     

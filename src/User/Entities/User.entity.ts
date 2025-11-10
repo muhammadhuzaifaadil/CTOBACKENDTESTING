@@ -34,6 +34,9 @@ export class User {
 
   @Column({ nullable: true })
   refreshToken?: string;
+
+  @Column({ default: false })
+  isDeleted?: boolean;
   
   @ManyToOne(() => Roles, (role) => role.users)
   role: Roles;

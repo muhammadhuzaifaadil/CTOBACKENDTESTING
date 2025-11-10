@@ -148,4 +148,39 @@ async create(
   delete(@Param('id', ParseIntPipe) id: number) {
     return this.projectService.deleteProject(id);
   }
+
+   @Get('buyersummary/:id')
+  getSummaryBuyer(
+    @Param('id', ParseIntPipe) id: number
+    // @CurrentUser('userId') userId: number
+  ) {
+    return this.projectService.getBuyerDetails(id);
+  }
+
+ @Get('sellersummary/:id')
+getSummarySeller(
+@Param('id', ParseIntPipe) id: number
+) {
+  return this.projectService.getSellerDetails(id);
+}
+
+
+
+
+
+
+//   @Get('buyersummarycached/:id')
+//   getSummaryBuyerwithCache(
+//     @Param('id', ParseIntPipe) id: number
+//     // @CurrentUser('userId') userId: number
+//   ) {
+//     return this.projectService.getBuyerDetailswithCache(id);
+//   }
+
+//  @Get('sellersummarycached/:id')
+// getSummarySellerwithCache(
+// @Param('id', ParseIntPipe) id: number
+// ) {
+//   return this.projectService.getSellerDetailswithCache(id);
+// }
 }

@@ -267,5 +267,23 @@ async getUserById(id: number): Promise<ResultDto<UserResponseDTO>> {
 }
 
 
+// User manual deletion
+async deleteUser(id: number):Promise<any>
+{
+  const user = await this.userRepo.findOne({where:{id}});
+  if(!user)
+  {
+    throw new BadRequestException("user is already deleted!")
+
+  } 
+  user.isDeleted=true;
+  await this.userRepo.save(user);
+  return new ResultDto(
+    [],
+    "User has been deleted!",
+    true
+  );
+}
+
 
 }
