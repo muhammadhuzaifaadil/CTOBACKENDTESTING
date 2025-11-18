@@ -14,7 +14,7 @@ import { ResultDto } from '../../Common/Utility/ResultModel'; // assuming you ha
 import { Bid, BidStatus } from '../Entity/Bid.entity';
 import { User } from 'src/User/Entities/User.entity';
 import { Project } from 'src/Project/entity/project.entity';
-import { postBidDTO } from '../DTOs/postBid.dto';
+import { postBidDTO, updateBidDTO } from '../DTOs/postBid.dto';
 import { RoleType } from 'src/Roles/Entities/Role.entity';
 import { BidResponseDTO } from '../DTOs/BidResponseDTO';
 import { ProjectWithBidsDTO, SellerBidDTO } from '../DTOs/ProjectBidResponseDTO';
@@ -470,6 +470,29 @@ async getBidsForProject(
   }
 }
 
+async editBids(id: number,
+    dto: updateBidDTO): Promise<ResultDto<Bid>>
+{
+  const bid = await this.bidRepo.findOne({where:{id}})
+      if (!bid) throw new NotFoundException(`Bid with ID ${id} not found`);
+  
+  if(!BidStatus.PENDING.includes(bid.status))
+  {
+      throw new BadRequestException('Bid cannot be edited after Accepted.');
+    
+  }
+  Object.assign(bid, dto);
+      const updated = await this.bidRepo.save(bid);
+  
+      return new ResultDto(updated, 'Bid updated successfully', true);
+
+
+}
+
+async deleteBids()
+{
+
+}
 
 async acceptBid(id: number, userId: number, userRole: string) {
   if (userRole !== RoleType.BUYER)

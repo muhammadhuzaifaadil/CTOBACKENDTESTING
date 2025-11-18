@@ -135,7 +135,63 @@ async create(
       limit,
     );
   }
+
+
+
+  @Get('paginated/buyer/all')
+   @ApiQuery({ name: 'filterKey', required: false, type: String, description: 'Field name to filter by (e.g. firstName, email)' })
+   @ApiQuery({ name: 'filterBy', required: false,type: String, description: 'Value to search for' })
+   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number' })
+   @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Items per page' })
+  async getPaginatedForBuyer(
+    @CurrentUser('userId') userId: number,
+    @CurrentUser('role') userRole: any,
+    @Query('filterKey') filterKey?: string,
+    @Query('filterBy') filterBy?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+   
+  ) {
+
+ 
+    return this.projectService.getProjectsPaginatedforBuyer(
+      userRole,
+      userId,
+      filterBy,
+      filterKey,
+      page,
+      limit,
+    );
+  }
   
+@Get('paginated/seller/all')
+   @ApiQuery({ name: 'filterKey', required: false, type: String, description: 'Field name to filter by (e.g. firstName, email)' })
+   @ApiQuery({ name: 'filterBy', required: false,type: String, description: 'Value to search for' })
+   @ApiQuery({ name: 'page', required: true, type: Number, description: 'Page number' })
+   @ApiQuery({ name: 'limit', required: true, type: Number, description: 'Items per page' })
+  async getPaginatedForSeller(
+    @CurrentUser('userId') userId: number,
+    @CurrentUser('role') userRole: any,
+    @Query('filterKey') filterKey?: string,
+    @Query('filterBy') filterBy?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+   
+  ) {
+
+ 
+    return this.projectService.getProjectsPaginatedforSeller(
+      userRole,
+      userId,
+      filterBy,
+      filterKey,
+      page,
+      limit,
+    );
+  }
+
+
+
   @Put(':id')
   async update(
     @Param('id') id: number,
@@ -164,6 +220,13 @@ getSummarySeller(
   return this.projectService.getSellerDetails(id);
 }
 
+
+  @Put('updatepublish/:id')
+  async updatepublish(
+    @Param('id') id: number,
+  ) {
+    return this.projectService.postPublish(id);
+  }
 
 
 

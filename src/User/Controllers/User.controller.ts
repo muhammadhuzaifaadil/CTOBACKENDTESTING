@@ -9,7 +9,8 @@ import {
   UseGuards,
   ForbiddenException,
   Query,
-  ParseIntPipe
+  ParseIntPipe,
+  UnauthorizedException
 } from '@nestjs/common';
 
 import { AuthGuard } from '@nestjs/passport';
@@ -21,6 +22,7 @@ import { TokenUserDTO } from 'src/Auth/DTOs/token-user.dto';
 import { ResultDto } from 'src/Common/Utility/ResultModel';
 import { updateProfileDTO } from '../DTOs/updateprofile.dto';
 import { UserService } from '../Service/user.service';
+import { RoleType } from 'src/Roles/Entities/Role.entity';
 
 @ApiTags('Users')
 @ApiBearerAuth('access-token') // Match this with 'access-token' in main.ts
@@ -81,7 +83,15 @@ async getAllUsers() {
   ): Promise<ResultDto<any>> {
     return this.userService.getUsersPaginated(filterBy, filterKey, page, limit);
   }
-
+@Get('/userstatistics/all')
+async getuserstats(@CurrentUser('role') userRole: any)
+{
+  if(!(userRole===RoleType.SUPERADMIN))
+  {
+    throw new UnauthorizedException("Unauthorized Attempt to Access")
+  }
+  return this.userService.getUserStatistics();
+}
 @Get(':id')
 @ApiOperation({ summary: 'Get user by ID with profile' })
 async getUserById(@Param('id', ParseIntPipe) id: number) {
@@ -94,4 +104,6 @@ async deleteUserById(@Param('id', ParseIntPipe) id: number)
 {
   return this.userService.deleteUser(id);
 }
+
+
 }

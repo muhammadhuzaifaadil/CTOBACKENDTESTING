@@ -5,7 +5,8 @@ import {
   BadRequestException, 
   UseGuards,
   UploadedFiles,
-  UseInterceptors
+  UseInterceptors,
+  Get
 } from '@nestjs/common';
 import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '../Service/auth.service';
@@ -21,6 +22,7 @@ import { VerifyOtpDto } from 'src/OTP/DTOs/verify-otp.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { TokenUserDTO } from '../DTOs/token-user.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { UpdateFcmTokenDto } from 'src/User/DTOs/updatefcmtoken.dto';
 
 
 @ApiTags('Auth')
@@ -106,6 +108,28 @@ async register(
     return this.authService.resetPassword(dto);
   }
 
- 
+
+  
+  @Get('/getallbuyers')
+  async getAllBuyers() {
+    return await this.authService.getAllBuyers();
+  }
+  @Get('getallsellers')
+  async getAllSellers() {
+    return await this.authService.getAllSellers();
+  }
+
+
+
+
+  @Post('update-fcm-token')
+@UseGuards(AuthGuard('jwt'))
+async updateFcmToken(
+  @CurrentUser('userId') userid:any,
+  @Body() dto: UpdateFcmTokenDto,
+) {
+  return this.authService.updateFcmToken(userid, dto.fcmToken);
+}
+
 
 }

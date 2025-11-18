@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -24,6 +25,7 @@ import { EmailService } from 'src/Common/Utility/email.service';
 import { UpdatePasswordDto } from '../DTOs/update-userpass.dto';
 import { UploadService } from 'src/Uploads/services/uploads.services';
 import { Upload } from 'src/Uploads/Entities/upload.entity';
+import { CloudinaryService } from 'src/Common/Utility/CloudinaryService';
 @Injectable()
 export class AuthService {
   constructor(
@@ -38,6 +40,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
     private readonly uploadService: UploadService,
+    private readonly cloudinaryService:CloudinaryService
   ) {}
 
 //   async register(dto: RegisterDto): Promise<User> {
@@ -206,29 +209,75 @@ async register(dto: RegisterDto, files?: Record<string, Express.Multer.File[]>):
   // ✅ 7. Handle File Metadata (for SELLER only)
   let savedCompany: Company | null = null;
   if (dto.role === RoleType.SELLER) {
-    let logoMeta:Upload|null = null;
-    let licenseMeta:Upload|null = null;
-    let portfolioMeta:Upload|null = null;
+    let logoUrl: any = null;
+    let licenseUrl: string | null = null;
+    let portfolioUrl: string | null = null;
+    
+    if (files?.companyLogo?.[0]) {
+      logoUrl = await this.cloudinaryService.uploadFile(files?.companyLogo?.[0]);
+    }
+    else if(dto.company?.logoUrl)
+    {
+      logoUrl = dto.company?.logoUrl;
+    }
 
-    if (files?.companyLogo?.[0])
-      logoMeta = await this.uploadService.saveFileMeta(files.companyLogo[0], savedUser.id);
-    if (files?.businessLicense?.[0])
-      licenseMeta = await this.uploadService.saveFileMeta(files.businessLicense[0], savedUser.id);
-    if (files?.portfolio?.[0])
-      portfolioMeta = await this.uploadService.saveFileMeta(files.portfolio[0], savedUser.id);
+    if (files?.businessLicense?.[0]) {
+      licenseUrl = await this.cloudinaryService.uploadFile(files.businessLicense[0]);
+    }
+    else if(dto.company?.businessLicenseUrl)
+    {
+      licenseUrl = dto.company?.businessLicenseUrl;
+    }
+
+    if (files?.portfolio?.[0]) {
+      portfolioUrl = await this.cloudinaryService.uploadFile(files.portfolio[0]);
+    }
+     else if(dto.company?.portfolioUrl)
+    {
+      portfolioUrl = dto.company?.portfolioUrl;
+    }
 
     const company = this.companyRepo.create({
       ...dto.company,
-      logoUrl: logoMeta?.filePath,
-      businessLicenseUrl: licenseMeta?.filePath,
-      portfolioUrl: portfolioMeta?.filePath,
+      logoUrl:logoUrl,
+      businessLicenseUrl: licenseUrl?.toString(),
+      portfolioUrl: portfolioUrl?.toString(),
     });
 
     savedCompany = await this.companyRepo.save(company);
   } else if (dto.role === RoleType.BUYER && dto.company) {
     // buyer with optional company
-    const company = this.companyRepo.create(dto.company);
+
+    let logoUrl: any = null;
+    if (files?.companyLogo?.[0]) {
+      logoUrl = await this.cloudinaryService.uploadFile(files.companyLogo[0]);
+    }
+    else if(dto.company?.logoUrl)
+    {
+      logoUrl = dto.company?.logoUrl;
+    }
+
+    // const company = this.companyRepo.create(dto.company);
+
+    const company = this.companyRepo.create({
+      ...dto.company,
+      logoUrl:logoUrl,
+    });
+
     savedCompany = await this.companyRepo.save(company);
+  }
+  else if(dto.role === RoleType.SUPERADMIN)
+  {
+    const user = await this.userRepo.findOne({where:{role:{id:2}}})
+    if(user)
+    {
+      throw new BadRequestException("SuperAdmin Already exists")
+    }
+    const company = this.companyRepo.create({
+      ...dto.company,
+    });
+
+    savedCompany = await this.companyRepo.save(company); 
   }
 
   // ✅ 8. Create Buyer/Seller Profile
@@ -383,5 +432,55 @@ async updatePassword(dto: UpdatePasswordDto,userId:number): Promise<string> {
   await this.userRepo.update({ id: userId }, { refreshToken: '' });
   return { message: 'Logged out successfully' };
 }
+
+async getAllBuyers() {
+    const buyers = await this.buyerRepo.find({
+      relations: ['user', 'company', 'contact'], 
+      order: { id: 'DESC' },
+    });
+
+    return buyers;
+  }
+
+  async getAllSellers() {
+    const sellers = await this.sellerRepo.find({
+      relations: ['user', 'company', 'contact'],
+      order: { id: 'DESC' },
+    });
+
+    return sellers;
+  }
+// in working if admin
+async registerAdmin(role:string,dto:any)
+{
+  if(!(role = RoleType.SUPERADMIN))
+  {
+    throw new UnauthorizedException("Unauthorized Access")
+  }
+  const user = await this.userRepo.findOne({where:{email:dto.email}});
+  if(user)
+  {
+    throw new BadRequestException("User already exists!");
+  }
+
+  
+}
+
+async updateFcmToken(userId: number, fcmToken: string) {
+  try {
+    await this.userRepo.update(
+      { id: userId },
+      { fcmToken }
+    );
+
+    return {
+      success: true,
+      message: 'FCM token updated successfully',
+    };
+  } catch (err) {
+    throw new InternalServerErrorException('Failed to update FCM token');
+  }
+}
+
 
 }

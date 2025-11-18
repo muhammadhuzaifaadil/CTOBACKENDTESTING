@@ -38,3 +38,29 @@ export class postBidDTO{
 
     
 }
+
+export class updateBidDTO{
+
+
+
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    proposalText?:string;
+
+    @ApiProperty()
+    @IsOptional()
+    @IsString()
+    timeline?:string;
+
+  @ApiProperty()
+      @IsOptional()
+      @IsString()
+      attachment?: string;
+
+
+    @ApiProperty()
+    @IsOptional()
+    @IsNumber()
+    bidAmount?:number;
+}

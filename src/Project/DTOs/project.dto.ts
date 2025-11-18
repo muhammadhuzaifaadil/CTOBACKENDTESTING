@@ -66,5 +66,70 @@ attachment?: string | null;
 }
 
 
-export class UpdateProjectDto extends PartialType(CreateProjectDto) {}
 
+export class UpdateProjectDto{
+
+
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  title?: string;
+
+  @ApiProperty()
+  @IsString()
+    @IsOptional()
+
+  outline?: string;
+
+  @ApiProperty()
+  @IsString()
+    @IsOptional()
+
+  requirements?: string;
+
+  @ApiProperty()
+  @IsString()
+    @IsOptional()
+
+  budgetRange?: string;
+
+  @ApiProperty()
+  @IsString()
+    @IsOptional()
+
+  timeline?: string;
+
+  // @ApiProperty()
+  // @IsString()
+  // @IsNotEmpty()
+  // skillsRequired: string[];
+
+
+  @ApiProperty({ type: [String] })
+@IsOptional()
+@IsArray()
+@IsString({ each: true })
+skillsRequired?: string[];
+
+
+ @ApiProperty()
+@IsOptional()
+@IsString()
+attachment?: string | null;
+
+  // @Exclude()
+  // @ApiProperty()
+  // @IsNumber()
+  // userId: number;
+
+  @ApiProperty()
+  @IsEnum(ProjectStatus)
+  @IsOptional()
+  status?: ProjectStatus;
+
+  @ApiProperty()
+  @IsEnum(StatusColor)
+  @IsOptional()
+  statusColor?: StatusColor;
+}

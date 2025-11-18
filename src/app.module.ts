@@ -16,8 +16,10 @@ import { OTPModule } from './OTP/OTP.module';
 import { UploadModule } from './Uploads/upload.module';
 import { ProjectModule } from './Project/project.module';
 import { BidModule } from './Bid/Bid.module';
+import { TemplateModule } from './Template/Template.Module';
 // import { CacheModule } from '@nestjs/cache-manager';
 // import { redisStore } from 'cache-manager-ioredis-yet';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [OTPModule,
@@ -58,7 +60,9 @@ import { BidModule } from './Bid/Bid.module';
     BuyerProfileModule,
     SellerProfileModule,
     ProjectModule,
-    BidModule
+    BidModule,
+    TemplateModule,
+    NotificationModule
   ],
   controllers: [AppController],
   providers: [AppService],

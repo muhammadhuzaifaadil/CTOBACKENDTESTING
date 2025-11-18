@@ -18,6 +18,7 @@ import { BuyerProfile } from 'src/BuyerProfile/Entity/BuyerProfile.entity';
 import { SellerProfile } from 'src/Seller/Entity/SellerProfile.entity';
 import { UserResponseDTO } from '../DTOs/userResponse.dto';
 import { mapperService } from '../../Common/Utility/mapper.dto';
+import { helper } from 'src/Common/Utility/helper.service';
 
 @Injectable()
 export class UserService {
@@ -32,7 +33,7 @@ export class UserService {
     @InjectRepository(Roles) private readonly roleRepo: Repository<Roles>,
     @InjectRepository(BuyerProfile) private readonly buyerRepo: Repository<BuyerProfile>,
     @InjectRepository(SellerProfile) private readonly sellerRepo: Repository<SellerProfile>,
-    
+    private readonly helperService:helper
     ){}
 
   // async updateUser(id: number, updateUserDto: updateProfileDTO):Promise<ResultDto<User>>
@@ -69,7 +70,7 @@ export class UserService {
     if(user?.role?.name===RoleType.BUYER)
     {
       const buyerProfile = await this.buyerRepo.findOne({
-        where:{user},
+        where:{user:{id:id}},
         relations:['contact','company']
       }); 
       contact = buyerProfile?.contact ?? null;
@@ -78,7 +79,7 @@ export class UserService {
     else if(user?.role.name===RoleType.SELLER)
     {
       const sellerProfile = await this.sellerRepo.findOne({
-        where:{user},
+        where:{user:{id:id}},
         relations:['contact','company']
       });
       contact = sellerProfile?.contact ?? null;
@@ -109,10 +110,16 @@ export class UserService {
       name: dto.CompanyName ?? company.name,
       websiteUrl: dto.websiteUrl ?? company.websiteUrl,
       businessCategory: dto.businessCategory ?? company.businessCategory,
+      
       companyDetail:
         dto.experience !== undefined
           ? `Experience: ${dto.experience}`
           : company.companyDetail,
+
+
+      logoUrl: dto.logoUrl ?? company.logoUrl,
+      businessLicenseUrl: dto.businessLicenseUrl ?? company.businessLicenseUrl,
+      portfolioUrl: dto.portfolioUrl ?? company.portfolioUrl,
     });
     await this.companyRepo.save(company);
   }
@@ -188,7 +195,9 @@ async getUserById(id: number): Promise<ResultDto<UserResponseDTO>> {
 
     // 🧩 Use mapper to shape final safe DTO
     const mappedUser = this.mapper.mapToUserDTO(user, profile);
-    const result = new UserResponseDTO(mappedUser);
+// 🔹 Replace null or undefined with empty string recursively
+    const cleanData = this.helperService.cleanNullValues(mappedUser);
+    const result = new UserResponseDTO(cleanData);
 
     return new ResultDto(result, 'User fetched successfully', true);
   } catch (error) {
@@ -197,9 +206,8 @@ async getUserById(id: number): Promise<ResultDto<UserResponseDTO>> {
 }
 
 
-
-  // 🟢 GET USERS WITH FILTERING + PAGINATION
- async getUsersPaginated(
+ 
+  async getUsersPaginated(
   filterBy?: string,
   filterKey?: string,
   page: number = 1,
@@ -283,6 +291,32 @@ async deleteUser(id: number):Promise<any>
     "User has been deleted!",
     true
   );
+}
+
+
+async getUserStatistics():Promise<ResultDto<any>>
+{
+ 
+    const queryRunner = this.userRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      const query = "SELECT"
+  '(SELECT COUNT(DISTINCT bp."userId") FROM "BuyerProfile" bp) AS buyer_count'
+  '(SELECT COUNT(DISTINCT sp."userId") FROM "SellerProfile" sp) AS seller_count;';
+      const result = await queryRunner.manager.query(query);
+
+      return new ResultDto({
+        TotalBuyers:result
+      },
+    "Buyers Count fetched successfully",true)
+    
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+    finally{
+      await queryRunner.release();
+    }
+  
 }
 
 

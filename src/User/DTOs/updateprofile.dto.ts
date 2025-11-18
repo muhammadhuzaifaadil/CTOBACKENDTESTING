@@ -45,6 +45,14 @@ export class updateProfileDTO{
     @ApiProperty()
     @IsOptional()
     experience?: number;
-
+    @ApiProperty()
+    @IsOptional()
+    logoUrl?:string;
+    @ApiProperty()
+    @IsOptional()
+    businessLicenseUrl?:string;
+    @ApiProperty()
+    @IsOptional()
+    portfolioUrl?:string;
 
 }

@@ -17,6 +17,7 @@ import { ProjectResponseDTO } from '../DTOs/projectResponse.dto';
 import { mapperService } from 'src/Common/Utility/mapper.dto';
 import { RoleType } from 'src/Roles/Entities/Role.entity';
 import { Bid, BidStatus } from 'src/Bid/Entity/Bid.entity';
+import { CloudinaryService } from 'src/Common/Utility/CloudinaryService';
 // import { CACHE_MANAGER } from '@nestjs/cache-manager';
 // import * as cacheManager_1 from 'cache-manager'; // ✅ correct Cache type
 
@@ -29,6 +30,7 @@ export class ProjectService {
     private readonly bidRepo:Repository<Bid>,
     private readonly uploadService:UploadService,
     private readonly mapper:mapperService,
+    private readonly cloudinaryService:CloudinaryService
   //    @Inject(CACHE_MANAGER)
   // private readonly cacheManager: cacheManager_1.Cache, // ✅ now has get/set/del
   ) {}
@@ -41,10 +43,14 @@ export class ProjectService {
 ): Promise<ResultDto<any>> {
   try {
     // ✅ 1. Handle file upload (if provided)
-    let attachmentUrl: string | null = null;
+    let attachmentUrl:any = null;
     if (files?.attachment?.[0]) {
-      const fileMeta = await this.uploadService.saveFileMeta(files.attachment[0], userId);
-      attachmentUrl = fileMeta.filePath;
+      const fileMeta = await this.cloudinaryService.uploadFile(files.attachment[0]);
+      attachmentUrl = fileMeta;
+    }
+    else if(dto?.attachment)
+    {
+      attachmentUrl = dto.attachment;
     }
 
     // ✅ 2. Handle skills array
@@ -65,10 +71,7 @@ export class ProjectService {
     {
       color = StatusColor.IN_PROGRESSCOLOR.toString()
     }
-    else if(dto.status === ProjectStatus.PUBLISHED)
-    {
-      color = StatusColor.PUBLISHEDCOLOR.toString()
-    }
+    
     // let parsedSkills: string[] = [];
 
     // ✅ parse stringified array if necessary
@@ -95,92 +98,7 @@ export class ProjectService {
     throw new InternalServerErrorException(error.message);
   }
 }
-// async createProject(
-//   userId: number,
-//   dto: any,
-//   files?: Record<string, Express.Multer.File[]>,
-// ): Promise<ResultDto<any>> {
-//   try {
-//     // ✅ 1. Handle file upload (if provided)
-//     let attachmentUrl: string | null = null;
 
-//     if (files?.attachment?.[0]) {
-//       // upload to UploadThing or S3 instead of local disk
-//       const uploadedFile = await this.uploadService.uploadToUploadThing(files.attachment[0]);
-//       attachmentUrl = uploadedFile.url; // Cloud-hosted file URL
-//     }
-
-//     // ✅ 2. Handle skills array
-//     const skills = Array.isArray(dto.skillsRequired)
-//       ? dto.skillsRequired.join(', ')
-//       : dto.skillsRequired;
-
-//     // ✅ 3. Handle project status color
-//     let color = '';
-//     switch (dto.status) {
-//       case ProjectStatus.DRAFT:
-//         color = StatusColor.DRAFTCOLOR.toString();
-//         break;
-//       case ProjectStatus.COMPLETED:
-//         color = StatusColor.COMPLETEDCOLOR.toString();
-//         break;
-//       case ProjectStatus.IN_PROGRESS:
-//         color = StatusColor.IN_PROGRESSCOLOR.toString();
-//         break;
-//       case ProjectStatus.PUBLISHED:
-//         color = StatusColor.PUBLISHEDCOLOR.toString();
-//         break;
-//       default:
-//         color = StatusColor.DRAFTCOLOR.toString();
-//     }
-
-//     // ✅ 4. Create project entity
-//     const project = this.projectRepo.create({
-//       ...dto,
-//       skillsRequired: skills,
-//       userId,
-//       attachment: attachmentUrl,
-//       status: dto.status || ProjectStatus.DRAFT,
-//       statusColor: color,
-//     });
-
-//     const saved = await this.projectRepo.save(project);
-//     return new ResultDto(saved, 'Project created successfully', true);
-//   } catch (error) {
-//     throw new InternalServerErrorException(error.message);
-//   }
-// }
-
-
-// Get projects for the seller
-//  async getAllProjects(userId:number,userRole:string): Promise<ResultDto<ProjectResponseDTO[]>> {
-//   try {
-//     // Fetch projects (no user relation since we don't need user details)
-//     let responseProjects:ProjectResponseDTO|null=null;
-//     if(userRole===RoleType.SELLER){
-//     const projects = await this.projectRepo.find();
-
-//     // Map to DTOs
-//        responseProjects = projects.map(
-//       (p) => new ProjectResponseDTO(this.mapper.mapToProjectDTO(p)),
-//     );
-// }
-// else if(userRole===RoleType.BUYER)
-// {
-//   const projects = await this.projectRepo.find({where:{userId}});
-//   responseProjects = projects.map(
-//     (p)=>new ProjectResponseDTO(this.mapper.mapToProjectDTO(p)),
-//   )
-// }
-//     return new ResultDto(
-//       responseProjects,
-//       'All projects fetched successfully',
-//       true,
-//     );
-//   } catch (error) {
-//     throw new InternalServerErrorException(error.message);
-//   }
-// }
 
 async getAllProjects(
   userId: number,
@@ -562,20 +480,259 @@ async getProjectsPaginated(
   }
 }
 
+async getProjectsPaginatedforBuyer(
+  userRole: string,
+  userId?: number,
+  filterBy?: any,
+  filterKey?: string, // e.g. 'title', 'skillsRequired', 'status'
+  page: number = 1,
+  limit: number = 10,
+): Promise<ResultDto<{
+  projects: ProjectResponseDTO[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}>> {
+  try {
+    const skip = (page - 1) * limit;
+
+    const qb = this.projectRepo
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.user', 'user')
+      // 👇 Join bids to count how many each project has
+      .leftJoin('project.bids', 'bids')
+      .loadRelationCountAndMap('project.bidCount', 'project.bids');
+
+      qb.where('user.id = :userId', { userId });
 
 
+
+    if (filterBy && filterKey) {
+  if (filterKey === 'status') {
+    const normalized = filterBy.trim().toLowerCase();
+
+    const statusMap: Record<string, ProjectStatus> = {
+      draft: ProjectStatus.DRAFT,
+      published: ProjectStatus.PUBLISHED,
+      'in progress': ProjectStatus.IN_PROGRESS,
+      completed: ProjectStatus.COMPLETED,
+    };
+
+    const matchedStatus = statusMap[normalized];
+
+    if (matchedStatus) {
+      qb.andWhere('project.status = :status', { status: matchedStatus });
+    } else {
+      qb.andWhere('1 = 0');
+    }
+  } 
+  else if (filterKey === 'search') {
+    qb.andWhere(
+  `(project.title ILIKE :term OR project.outline ILIKE :term OR project."skillsRequired"::text ILIKE :term)`,
+  { term: `%${filterBy}%` },
+);
+
+  } 
+  else {
+    qb.andWhere(`project.${filterKey} ILIKE :filterBy`, {
+      filterBy: `%${filterBy}%`,
+    });
+  }
+}
+
+
+    // 📊 Total count before pagination
+    const totalCount = await qb.getCount();
+
+    // 📄 Pagination & sorting
+    qb.orderBy('project.id', 'DESC').skip(skip).take(limit);
+
+    const projects = await qb.getMany();
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // ✅ Map to response DTOs
+    const responseProjects = projects.map(
+      (p) =>
+        new ProjectResponseDTO({
+          id: p.id,
+          title: p.title,
+          outline: p.outline,
+          requirements: p.requirements,
+          budgetRange: p.budgetRange,
+          timeline: p.timeline,
+          skillsRequired: p.skillsRequired,
+          attachment: p.attachment,
+          status: p.status,
+          bidCount: (p as any).bidCount || 0, // 👈 added
+
+          ...(userRole === RoleType.SELLER && p.user
+            ? {
+                buyerInfo: {
+                  id: p.user.id,
+                  name: p.user.firstName + p.user.lastName,
+                  email: p.user.email,
+                },
+              }
+            : {}),
+        }),
+    );
+
+    return new ResultDto(
+      {
+        projects: responseProjects,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+        },
+      },
+      `Projects retrieved successfully (page ${page} of ${totalPages})`,
+      true,
+    );
+  } catch (error) {
+    throw new InternalServerErrorException(error.message);
+  }
+}
+
+
+async getProjectsPaginatedforSeller(
+  userRole: string,
+  userId?: number,
+  filterBy?: any,
+  filterKey?: string, // e.g. 'title', 'skillsRequired', 'status'
+  page: number = 1,
+  limit: number = 10,
+): Promise<ResultDto<{
+  projects: ProjectResponseDTO[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}>> {
+  try {
+    const skip = (page - 1) * limit;
+
+    const qb = this.projectRepo
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.user', 'user')
+      // 👇 Join bids to count how many each project has
+      .leftJoin('project.bids', 'bids')
+      .loadRelationCountAndMap('project.bidCount', 'project.bids');
+
+  qb.where('project.status = :status', { status: ProjectStatus.PUBLISHED });
+
+
+
+    if (filterBy && filterKey) {
+  if (filterKey === 'status') {
+    const normalized = filterBy.trim().toLowerCase();
+
+    const statusMap: Record<string, ProjectStatus> = {
+      draft: ProjectStatus.DRAFT,
+      published: ProjectStatus.PUBLISHED,
+      'in progress': ProjectStatus.IN_PROGRESS,
+      completed: ProjectStatus.COMPLETED,
+    };
+
+    const matchedStatus = statusMap[normalized];
+
+    if (matchedStatus) {
+      qb.andWhere('project.status = :status', { status: matchedStatus });
+    } else {
+      qb.andWhere('1 = 0');
+    }
+  } 
+  else if (filterKey === 'search') {
+    qb.andWhere(
+  `(project.title ILIKE :term OR project.outline ILIKE :term OR project."skillsRequired"::text ILIKE :term)`,
+  { term: `%${filterBy}%` },
+);
+
+  } 
+  else {
+    qb.andWhere(`project.${filterKey} ILIKE :filterBy`, {
+      filterBy: `%${filterBy}%`,
+    });
+  }
+}
+
+
+    // 📊 Total count before pagination
+    const totalCount = await qb.getCount();
+
+    // 📄 Pagination & sorting
+    qb.orderBy('project.id', 'DESC').skip(skip).take(limit);
+
+    const projects = await qb.getMany();
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // ✅ Map to response DTOs
+    const responseProjects = projects.map(
+      (p) =>
+        new ProjectResponseDTO({
+          id: p.id,
+          title: p.title,
+          outline: p.outline,
+          requirements: p.requirements,
+          budgetRange: p.budgetRange,
+          timeline: p.timeline,
+          skillsRequired: p.skillsRequired,
+          attachment: p.attachment,
+          status: p.status,
+          bidCount: (p as any).bidCount || 0, // 👈 added
+
+          ...(userRole === RoleType.SELLER && p.user
+            ? {
+                buyerInfo: {
+                  id: p.user.id,
+                  name: p.user.firstName + p.user.lastName,
+                  email: p.user.email,
+                },
+              }
+            : {}),
+        }),
+    );
+
+    return new ResultDto(
+      {
+        projects: responseProjects,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+        },
+      },
+      `Projects retrieved successfully (page ${page} of ${totalPages})`,
+      true,
+    );
+  } catch (error) {
+    throw new InternalServerErrorException(error.message);
+  }
+}
 
   // 🟠 Update Project
   async updateProject(
     id: number,
     dto: UpdateProjectDto,
   ): Promise<ResultDto<Project>> {
-    const project = await this.projectRepo.findOne({ where: { id } });
+    const project = await this.projectRepo.findOne({ where: { id }});
+    // project?.bids.status
     if (!project) throw new NotFoundException(`Project with ID ${id} not found`);
     // Allow editing only Draft or Published
 // if (![ProjectStatus.DRAFT, ProjectStatus.PUBLISHED].includes(project.status)) {
 //   throw new BadRequestException('Project cannot be edited after award.');
 // }
+if(ProjectStatus.IN_PROGRESS.includes(project.status))
+{
+  throw new BadRequestException('Project cannot be edited after award.');
+}
     Object.assign(project, dto);
     const updated = await this.projectRepo.save(project);
 
@@ -948,4 +1105,16 @@ async getSellerDetails(id: number): Promise<ResultDto<any> | any> {
 }
 
 
+async postPublish(id:number):Promise<ResultDto<any>>
+{
+  const project = await this.projectRepo.findOne({where:{id}});
+  if(!project){
+    throw new BadRequestException("project does not exists!");
+  }
+  project.status = ProjectStatus.PUBLISHED;
+  project.statusColor = StatusColor.PUBLISHEDCOLOR;
+  this.projectRepo.save(project);
+  return new ResultDto([],"Project is now published",true);
+  
+}
 }

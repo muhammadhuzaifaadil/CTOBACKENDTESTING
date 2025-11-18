@@ -3,7 +3,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { ApiTags, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { BidService } from "../Services/Bid.service";
 import { CurrentUser } from "src/Common/Decorator/user.decorator";
-import { postBidDTO } from "../DTOs/postBid.dto";
+import { postBidDTO, updateBidDTO } from "../DTOs/postBid.dto";
 
 @ApiTags('Bids')
 @ApiBearerAuth('access-token') // Match this with 'access-token' in main.ts
@@ -48,6 +48,15 @@ async rejectBid(@Param('id', ParseIntPipe) id: number, @CurrentUser('userId') us
 
   return this.bidService.rejectBid(id, userId, userRole);
 }
+
+
+  @Put(':id')
+  async update(
+    @Param('id') id: number,
+    @Body() dto: updateBidDTO,
+  ) {
+    return this.bidService.editBids(id, dto);
+  }
 
 
 

@@ -31,7 +31,23 @@ export class CloudinaryService {
   }
 
   // Optional: direct upload from buffer
-//   async uploadFile(fileBuffer: Buffer, filename: string): Promise<UploadApiResponse> {
-//     return cloudinary.uploader.upload_stream({ folder: 'uploads', public_id: filename }).end(fileBuffer);
-//   }
+ // Upload from buffer instead of file.path
+  async uploadFile(file: Express.Multer.File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'sellers',
+          public_id: `${Date.now()}-${file.originalname}`,
+        },
+        (error, result: UploadApiResponse) => {
+          if (error) return reject(error);
+          resolve(result.secure_url);
+        },
+      );
+
+      // send the file buffer to the stream
+      if (!file.buffer) return reject(new Error('File buffer is missing'));
+      uploadStream.end(file.buffer);
+    });
+  }
 }

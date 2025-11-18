@@ -78,14 +78,17 @@
 
 
 
-import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { ClassSerializerInterceptor, Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { CloudinaryService } from 'src/Common/Utility/CloudinaryService';
 import { StorageEngine } from 'multer';
+import { ResultDto } from 'src/Common/Utility/ResultModel';
 
 @ApiTags('Upload')
 @Controller('upload')
+@UseInterceptors(ClassSerializerInterceptor) // ← serialize ResultDto
+
 export class UploadController {
   constructor(private readonly cloudinaryService: CloudinaryService) {}
 
@@ -108,12 +111,18 @@ export class UploadController {
       },
     },
   })
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    if (!file) return { message: 'No file uploaded' };
+  async uploadFile(@UploadedFile() file: Express.Multer.File):Promise<ResultDto<any>> {
+    if (!file) return new ResultDto(null, 'No file uploaded', false);
 
-    return {
-      url: file.path, // Cloudinary URL
-      filename: file.originalname,
-    };
+
+     return new ResultDto(
+      {
+        url: file.path,       // Cloudinary URL
+        filename: file.originalname,
+      },
+      'Successfully Uploaded',
+      true
+    );
+  
   }
 }

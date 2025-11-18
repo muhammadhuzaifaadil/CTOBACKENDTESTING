@@ -1,7 +1,7 @@
 import { Company } from 'src/Company/Entities/Company.entity';
 import { Contact } from 'src/Contact/Entities/Contact.entity';
 import { Roles } from '../../Roles/Entities/Role.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, ManyToMany, OneToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, ManyToMany, OneToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Project } from 'src/Project/entity/project.entity';
 import { Bid } from 'src/Bid/Entity/Bid.entity';
 // import { Roles } from 'src/Roles/Entity/roles.entity';
@@ -37,6 +37,17 @@ export class User {
 
   @Column({ default: false })
   isDeleted?: boolean;
+
+  @CreateDateColumn({default:null})
+
+    createdAt?: Date;
+  
+    @UpdateDateColumn({default:null})
+    updatedAt?: Date;
+
+
+    @Column({ type: 'text', nullable: true })
+fcmToken?: string;
   
   @ManyToOne(() => Roles, (role) => role.users)
   role: Roles;

@@ -11,11 +11,12 @@ import { BuyerProfile } from '../BuyerProfile/Entity/BuyerProfile.entity.js';
 import { Company } from '../Company/Entities/Company.entity.js';
 import { Contact } from '../Contact/Entities/Contact.entity.js';
 import { mapperService } from '../Common/Utility/mapper.dto.js';
+import { helper } from '../Common/Utility/helper.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User,Company,Contact,Roles,SellerProfile,BuyerProfile]),
   AuthModule],
-  providers: [UserService,mapperService],
+  providers: [UserService,mapperService,helper],
   controllers: [UserController]
 })
 export class UserModule { }

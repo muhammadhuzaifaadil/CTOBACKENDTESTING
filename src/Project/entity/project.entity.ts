@@ -12,6 +12,8 @@ import {
 import { User } from '../../User/Entities/User.entity'; // adjust import as needed
 import { Exclude } from 'class-transformer';
 import { Bid } from 'src/Bid/Entity/Bid.entity';
+import { ProjectAnswer } from 'src/Template/Entities/ProjectAnswer.entity';
+import { Template } from 'src/Template/Entities/Template.entity';
 
 
 export enum ProjectStatus {
@@ -92,4 +94,80 @@ attachment: string | null;
 // A Project can have many bids (many sellers bidding).
   @OneToMany(() => Bid, (bid) => bid.project)
 bids: Bid[];
+}
+
+
+// new project entity for templates
+// project.entity.ts
+
+@Entity('projectsnew')
+export class ProjectNew {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ length: 150 })
+  title: string;
+
+  @Column({ type: 'text' })
+  outline: string;
+
+  @Column({ type: 'text' })
+  requirements: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  budgetRange: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  timeline: string;
+
+  @Column("text", { array: true, nullable: true })
+  skillsRequired: string[];
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  attachment: string | null;
+
+  @Column({
+    type: 'enum',
+    enum: ProjectStatus,
+    default: ProjectStatus.DRAFT,
+  })
+  status: ProjectStatus;
+
+  @Column({
+    type: 'enum',
+    enum: StatusColor,
+    nullable: true
+  })
+  statusColor: StatusColor;
+
+  @ManyToOne(() => User, (user) => user.projects, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
+
+  @Column()
+  userId: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  // -------------------------------
+  // NEW: Dynamic Form Feature
+  // -------------------------------
+
+  @ManyToOne(() => Template, (template) => template.projects, { nullable: true })
+  @JoinColumn({ name: 'templateId' })
+  template: Template;
+
+  @Column({ nullable: true })
+  templateId: number;
+
+  // project has many answers
+  @OneToMany(() => ProjectAnswer, (ans) => ans.project, { cascade: true })
+  answers: ProjectAnswer[];
+
+  @OneToMany(() => Bid, (bid) => bid.project)
+  bids: Bid[];
 }

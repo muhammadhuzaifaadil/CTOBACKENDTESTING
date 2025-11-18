@@ -25,4 +25,7 @@ export class Company {
 
   @Column({ nullable: true })
   portfolioUrl?: string;
+
+  @Column({ nullable: true })
+  crNumber?:string;
 }
