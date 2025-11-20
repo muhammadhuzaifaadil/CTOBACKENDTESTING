@@ -1,6 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
-import { QuestionType } from "../Entities/TemplateQuestion.entity";
+import { IsArray, IsBoolean, IsEnum, isNotEmpty, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CreateTemplateDto{
@@ -15,42 +14,30 @@ export class CreateTemplateDto{
     description: string;
 
 
-    //   @ApiProperty({ type: () => CreateTemplateQuestionDto })
-    //   @ValidateNested()
-    //   @Type(() => CreateTemplateQuestionDto)
-    //   templatequestions: CreateTemplateQuestionDto;
 
-    @ApiProperty({ type: () => [CreateTemplateQuestionDto] })
-  @ValidateNested({ each: true })
-  @Type(() => CreateTemplateQuestionDto)
-  @IsArray()
-  templateQuestions: CreateTemplateQuestionDto[];
+  //   @ApiProperty({ type: () => [CreateTemplateQuestionDto] })
+  // @ValidateNested({ each: true })
+  // @Type(() => CreateTemplateQuestionDto)
+  // @IsArray()
+  // templateQuestions: CreateTemplateQuestionDto[];
 }
 
 
 export class CreateTemplateQuestionDto {
  
 
-@ApiProperty()
+  @ApiProperty()
   @IsNotEmpty()
   questionText: string;
-@ApiProperty()
-  @IsEnum(QuestionType)
-  type: QuestionType;
-    @ApiProperty()
-  @IsOptional()
-  @IsArray()
-  options?: any[];
-    @ApiProperty()
-  @IsOptional()
-  @IsBoolean()
-  isCommon?: boolean;
-    @ApiProperty()
-  @IsOptional()
-  @IsBoolean()
-  isRequired?: boolean;
-    @ApiProperty()
-  @IsOptional()
+
+  @ApiProperty()
   @IsNumber()
-  sortOrder?: number;
+  projectId:number;
+  @ApiProperty()
+  @IsNumber()
+  userId:number;
+  @ApiProperty()
+  @IsNotEmpty()
+  value: string;
+
 }

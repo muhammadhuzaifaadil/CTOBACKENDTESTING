@@ -24,17 +24,19 @@ export class TemplateService{
 
   const savedTemplate = await this.templateRepo.save(template);
 
-  const questionEntities = dto.templateQuestions.map(q =>
-    this.templateQuestionRepo.create({
-      ...q,
-      templateId: savedTemplate.id,
-    })
-  );
+  // const questionEntities = dto.templateQuestions.map(q =>
+  //   this.templateQuestionRepo.create({
+  //     ...q,
+  //     templateId: savedTemplate.id,
+  //   })
+  // );
 
-  await this.templateQuestionRepo.save(questionEntities);
+  // await this.templateQuestionRepo.save(savedTemplate);
 
-  return { template: savedTemplate, questions: questionEntities };
+  return { template: savedTemplate };
 }
+
+
 
 
 async getAllTemplates() {
@@ -49,7 +51,7 @@ async getTemplateById(templateId: number) {
       relations: ['questions'], 
       order: {
         questions: {
-          sortOrder: 'ASC',
+          id: 'ASC',
         },
       },
     });

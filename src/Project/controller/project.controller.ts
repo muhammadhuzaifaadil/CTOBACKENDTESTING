@@ -76,7 +76,7 @@ export class ProjectController {
 @UseInterceptors(FileInterceptor('attachment'))
 async create(
   @CurrentUser('userId') userId: number,
-  @Body() body: any,
+  @Body() body: CreateProjectDto,
   @UploadedFile() file?: Express.Multer.File,
 ) {
   // ✅ Parse JSON strings manually

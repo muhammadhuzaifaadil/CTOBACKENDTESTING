@@ -407,7 +407,7 @@ async updatePassword(dto: UpdatePasswordDto,userId:number): Promise<string> {
     // save hashed refresh token to DB for logout validation
     user.refreshToken = await bcrypt.hash(refreshToken, 10);
     await this.userRepo.save(user);
-
+    await this.updateFcmToken(user.id,dto.fcmToken);
     const response: any = {
       accessToken,
       refreshToken,
@@ -466,7 +466,7 @@ async registerAdmin(role:string,dto:any)
   
 }
 
-async updateFcmToken(userId: number, fcmToken: string) {
+async updateFcmToken(userId: number, fcmToken?: string) {
   try {
     await this.userRepo.update(
       { id: userId },

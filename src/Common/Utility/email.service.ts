@@ -12,18 +12,18 @@ export class EmailService {
     //   user: 'muhammad.huzaifa@iplexsoft.com',
     //   pass: 'M@h#123123', // Use app password if 2FA enabled
     // },
-     host: 'smtp.hostinger.com',
+     host: process.env.SMTP_MAIL_HOST,
   port: 587,
   secure: false,
   auth: {
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS1+'#'+process.env.MAIL_PASS2,
+    user: process.env.SMTP_USERNAME,
+    pass: process.env.SMTP_APP_PASS,
   },
   });
 
   async sendMail(to: string, subject: string, html: string) {
     await this.transporter.sendMail({
-      from: '"YourApp Support" <muhammad.huzaifa@iplexsoft.com>',
+      from: '"CTO.SA App Support" <cto.saudi@gmail.com>',
       to,
       subject,
       html,

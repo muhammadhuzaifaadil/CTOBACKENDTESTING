@@ -6,6 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
   HttpException,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository, SelectQueryBuilder } from 'typeorm';
@@ -18,6 +19,10 @@ import { postBidDTO, updateBidDTO } from '../DTOs/postBid.dto';
 import { RoleType } from 'src/Roles/Entities/Role.entity';
 import { BidResponseDTO } from '../DTOs/BidResponseDTO';
 import { ProjectWithBidsDTO, SellerBidDTO } from '../DTOs/ProjectBidResponseDTO';
+import { NotificationService } from 'src/notification/notification.service';
+import { sendNotificationDTO } from 'src/notification/dto/send-notification.dto';
+import { Notification } from 'src/notification/entities/notification.entity';
+import { NotificationDto } from 'src/notification/dto/create-notification.dto';
 
 @Injectable()
 export class BidService {
@@ -27,7 +32,10 @@ export class BidService {
     @InjectRepository(User)
     private readonly userRepo:Repository<User>,
     @InjectRepository(Project)
-    private readonly projectRepo:Repository<Project>
+    private readonly projectRepo:Repository<Project>,
+    @InjectRepository(Notification)
+    private readonly notificationRepo:Repository<Notification>,
+    private readonly notificationService:NotificationService
   ) {}
 
 // async createBid(sellerId: number, dto: postBidDTO): Promise<ResultDto<Bid|any>> {
@@ -219,7 +227,7 @@ async getBidsPaginated(
   limit: number = 10,
 ): Promise<
   ResultDto<{
-    bids: BidResponseDTO[];
+    bids: any[];
     pagination: {
       page: number;
       limit: number;
@@ -273,7 +281,7 @@ async getBidsPaginated(
     // 🧱 Map to DTO
     const bidResponses = bids.map(
       (b) =>
-        new BidResponseDTO({
+        ({
           id: b.id,
           proposalText: b.proposalText,
           bidAmount: b.bidAmount,
@@ -374,12 +382,12 @@ async getBidById(
 
     if (userRole === RoleType.SELLER) {
       bid = await this.bidRepo.findOne({
-        where: { id, seller: { id: userId },isWithdrawn:false },
+        where: { id, seller: { id: userId } },
            relations: ['project', 'project.user', 'seller'],
       });
     } else if (userRole === RoleType.BUYER) {
       bid = await this.bidRepo.findOne({
-        where: { id, project: { user: { id: userId } } ,isWithdrawn:false},
+        where: { id, project: { user: { id: userId } } },
           relations: ['project', 'project.user', 'seller'],
       });
     }
@@ -391,13 +399,22 @@ async getBidById(
     const responseBid = new BidResponseDTO({
       id: bid.id,
       projectTitle: bid.project.title,
+      projectBudget:bid.project.budgetRange,
       buyerName: `${bid.project.user.firstName} ${bid.project.user.lastName}`,
       // sellerName: `${bid.seller.firstName} ${bid.seller.lastName}`,
+      buyerEmail:bid.project.user.email,
       proposalText: bid.proposalText,
       bidAmount: bid.bidAmount,
       timeline: bid.timeline,
       attachment: bid.attachment,
       status: bid.status,
+      projectInfo:{
+         title: bid.project.title,
+      budgetRange:bid.project.budgetRange,
+      buyerName: `${bid.project.user.firstName} ${bid.project.user.lastName}`,
+      // sellerName: `${bid.seller.firstName} ${bid.seller.lastName}`,
+      buyerEmail:bid.project.user.email
+      }
     });
 
     return new ResultDto(responseBid, 'Bid fetched successfully', true);
@@ -500,7 +517,7 @@ async acceptBid(id: number, userId: number, userRole: string) {
 
   const bid = await this.bidRepo.findOne({
     where: { id },
-    relations: ['project', 'project.bids', 'project.user'],
+    relations: ['project', 'project.bids', 'project.user','seller'],
   });
 
   if (!bid) throw new NotFoundException('Bid not found');
@@ -520,6 +537,46 @@ async acceptBid(id: number, userId: number, userRole: string) {
     b.status = b.id === id ? BidStatus.ACCEPTED : BidStatus.REJECTED;
     await this.bidRepo.save(b);
   }
+  const bidder = await this.userRepo.findOne({where:{id:bid.seller.id}});
+
+  // SELLER NOTIFICATION
+  const sellerNotification:sendNotificationDTO =
+  {
+    deviceId:bidder?.fcmToken || "",
+    title:"Bid Accepted!",
+    body:"Your Bid has been accepted and you are selected for the bid award process, please respond in 5 mins in order to begin the process otherwise you will be marked as REJECTED!"
+
+  }
+
+
+  const buyerNotification:sendNotificationDTO ={
+    deviceId:bid.project.user.fcmToken || "",
+    title:"Your Bid is Accepted!",
+    body:"You have successfully accepted the bid, wait 5 mins for the seller to respond meanwhile schedule a meeting on Google Meets / Zoom / Microsoft Teams with the Seller!"
+  }
+    // pass notification to the user
+    
+  const buyerNotificationService = await this.notificationService.sendPush(buyerNotification);
+  const sellerNotificationService = await this.notificationService.sendPush(sellerNotification);
+
+
+  const bidderNotification = await this.notificationRepo.create([{
+    nTitle:sellerNotification.title,
+    nBody:sellerNotification.body,
+    notifiedUserId:bidder?.id,
+    notifierUserId:userId
+  },
+  {
+    nTitle:buyerNotification.title,
+    nBody:buyerNotification.body,
+    notifiedUserId:userId,
+    notifierUserId:userId
+  },
+
+])
+
+  await this.notificationRepo.save(bidderNotification);
+
 
   return new ResultDto(null, 'Bid accepted successfully', true);
 }

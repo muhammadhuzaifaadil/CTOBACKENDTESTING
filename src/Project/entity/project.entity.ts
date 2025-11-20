@@ -12,7 +12,6 @@ import {
 import { User } from '../../User/Entities/User.entity'; // adjust import as needed
 import { Exclude } from 'class-transformer';
 import { Bid } from 'src/Bid/Entity/Bid.entity';
-import { ProjectAnswer } from 'src/Template/Entities/ProjectAnswer.entity';
 import { Template } from 'src/Template/Entities/Template.entity';
 
 
@@ -161,12 +160,11 @@ export class ProjectNew {
   @JoinColumn({ name: 'templateId' })
   template: Template;
 
+
+
   @Column({ nullable: true })
   templateId: number;
 
-  // project has many answers
-  @OneToMany(() => ProjectAnswer, (ans) => ans.project, { cascade: true })
-  answers: ProjectAnswer[];
 
   @OneToMany(() => Bid, (bid) => bid.project)
   bids: Bid[];

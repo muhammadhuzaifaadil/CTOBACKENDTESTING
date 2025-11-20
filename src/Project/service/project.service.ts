@@ -18,6 +18,7 @@ import { mapperService } from 'src/Common/Utility/mapper.dto';
 import { RoleType } from 'src/Roles/Entities/Role.entity';
 import { Bid, BidStatus } from 'src/Bid/Entity/Bid.entity';
 import { CloudinaryService } from 'src/Common/Utility/CloudinaryService';
+import { TemplateQuestion } from 'src/Template/Entities/TemplateQuestion.entity';
 // import { CACHE_MANAGER } from '@nestjs/cache-manager';
 // import * as cacheManager_1 from 'cache-manager'; // ✅ correct Cache type
 
@@ -28,6 +29,8 @@ export class ProjectService {
     private readonly projectRepo: Repository<Project>,
     @InjectRepository(Bid)
     private readonly bidRepo:Repository<Bid>,
+    @InjectRepository(TemplateQuestion)
+    private readonly tqRepo:Repository<TemplateQuestion>,
     private readonly uploadService:UploadService,
     private readonly mapper:mapperService,
     private readonly cloudinaryService:CloudinaryService
@@ -71,6 +74,9 @@ export class ProjectService {
     {
       color = StatusColor.IN_PROGRESSCOLOR.toString()
     }
+    else{
+      color = StatusColor.PUBLISHEDCOLOR.toString()
+    }
     
     // let parsedSkills: string[] = [];
 
@@ -88,11 +94,26 @@ export class ProjectService {
       userId,
       attachment: attachmentUrl,
       status: dto.status || ProjectStatus.DRAFT,
-      statusColor:color
+      statusColor:color,
+      templateId:dto.templateId
     });
     
 
     const saved = await this.projectRepo.save(project);
+   if (dto.templateQuestions && dto.templateQuestions.length > 0) {
+  const templateAnswers = dto.templateQuestions.map((q) =>
+    this.tqRepo.create({
+      questionText: q.questionText,
+      value: q.questionValue,
+      userId: userId,
+      projectId: Object(saved).id,     // ✔ saved is NOT an array; it's a single object
+      templateId: dto.templateId,
+    })
+  );
+
+  await this.tqRepo.save(templateAnswers);
+}
+    // when working on frontend change this to savedtemplateanswer
     return new ResultDto(saved, 'Project created successfully', true);
   } catch (error) {
     throw new InternalServerErrorException(error.message);
