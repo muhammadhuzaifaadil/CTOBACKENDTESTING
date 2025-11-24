@@ -95,7 +95,7 @@ export class ProjectService {
       attachment: attachmentUrl,
       status: dto.status || ProjectStatus.DRAFT,
       statusColor:color,
-      templateId:dto.templateId
+      // templateId:dto.templateId
     });
     
 
@@ -154,7 +154,7 @@ async getAllProjects(
           requirements: p.requirements,
           budgetRange: p.budgetRange,
           timeline: p.timeline,
-          skillsRequired: p.skillsRequired,
+          // skillsRequired: p.skillsRequired,
           attachment: p.attachment,
           status: p.status,
           statusColor: p.statusColor,

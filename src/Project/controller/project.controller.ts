@@ -79,14 +79,14 @@ async create(
   @Body() body: CreateProjectDto,
   @UploadedFile() file?: Express.Multer.File,
 ) {
-  // ✅ Parse JSON strings manually
-  if (body.skillsRequired && typeof body.skillsRequired === 'string') {
-    try {
-      body.skillsRequired = JSON.parse(body.skillsRequired);
-    } catch {
-      throw new BadRequestException('Invalid skillsRequired format');
-    }
-  }
+  // // ✅ Parse JSON strings manually
+  // if (body.skillsRequired && typeof body.skillsRequired === 'string') {
+  //   try {
+  //     body.skillsRequired = JSON.parse(body.skillsRequired);
+  //   } catch {
+  //     throw new BadRequestException('Invalid skillsRequired format');
+  //   }
+  // }
 
   // ✅ Convert to DTO properly
   const dto = plainToInstance(CreateProjectDto, body);

@@ -68,12 +68,12 @@ import { Exclude, Type } from 'class-transformer';
 
 export class ProjectTemplateQuestions{
    @ApiProperty()
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   questionText: string;
 
   @ApiProperty()
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   questionValue: string;
 }
@@ -95,23 +95,52 @@ export class CreateProjectDto {
 
   @ApiProperty()
   @IsString()
+  @IsOptional()
+  ThirdPartyIntegrations?: string;
+
+  @ApiProperty()
+  @IsString()
   @IsNotEmpty()
   budgetRange: string;
+
+   
 
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   timeline: string;
 
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  TargetUser?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  UIUXRequirement?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  PreferredTechStack?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  PostLaunchSupport?: string;
+
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
   status: string;
 
-  @ApiProperty()
-  @IsArray()
-  @IsString({ each: true })
-  skillsRequired: string[];
+  // @ApiProperty()
+  // @IsArray()
+  // @IsString({ each: true })
+  // skillsRequired: string[];
 
   @ApiProperty()
   @IsOptional()
